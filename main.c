@@ -10,8 +10,9 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+#include "../libft/libft.h"
+#include <stddef.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 
 int	ft_get_num_length(int nb, int base_len)
@@ -19,8 +20,8 @@ int	ft_get_num_length(int nb, int base_len)
 	int	len;
 
 	len = 0;
-	if (nb <= 0)
-		len++;
+	if (nb == 0)
+		return (1);
 	while (nb != 0)
 	{
 		nb /= base_len;
@@ -29,81 +30,146 @@ int	ft_get_num_length(int nb, int base_len)
 	return (len);
 }
 
-char	*ft_itoa(int nb)
+int	ft_get_str_len(int nb, int num_len, int full_len, int show_sign)
+{
+	int	str_len;
+
+	str_len = num_len;
+	if (full_len != -1 && full_len > num_len)
+		str_len = full_len;
+	if (nb < 0 || show_sign)
+		str_len++;
+	return (str_len);
+}
+
+char	*ft_get_padded_string(int nb, int num_len, int full_len, int show_sign)
 {
 	int		i;
-	long	n;
-	int		len;
 	char	*str;
+	int		str_len;
 
-	len = ft_get_num_length(nb, 10);
-	i = len - 1;
-	str = malloc(sizeof(char) * (len + 1));
-	if (!str)
-		return (0);
+	str_len = ft_get_str_len(nb, num_len, full_len, show_sign);
+	str = (char *)malloc(sizeof(char) * (str_len + 1));
+	if (str == NULL)
+		return (NULL);
+	i = 0;
+	if (nb < 0)
+		*str = '-';
+	else if (show_sign)
+		*str = '+';
+	if (nb < 0 || show_sign)
+		str++;
+	while (full_len != -1 && i < full_len - num_len)
+		str[i++] = '0';
+	if (nb < 0 || show_sign)
+		str--;
 	if (nb == 0)
-		str[0] = '0';
-	n = (long)nb;
-	if (nb < 0)
-		str[0] = '-';
-	if (nb < 0)
-		n *= -1;
-	while (n != 0)
-	{
-		str[i--] = n % 10 + '0';
-		n /= 10;
-	}
-	str[len] = '\0';
+		str[str_len - 1] = '0';
+	str[str_len] = '\0';
 	return (str);
 }
 
-char	*ft_htoa(int nb, int is_upper)
+char	*ft_itoa_pad(int nb, int full_len, int show_sign)
 {
 	int		i;
 	long	n;
+	int		num_len;
 	char	*str;
 
-	i = ft_get_num_length(nb, 16) - 1;
-	str = malloc(sizeof(char) * (ft_get_num_length(nb, 16) + 1));
-	if (!str)
-		return (0);
-	n = (long)nb;
+	num_len = ft_get_num_length(nb, 10);
+	str = ft_get_padded_string(nb, num_len, full_len, show_sign);
+	if (str == NULL)
+		return (NULL);
 	if (nb == 0)
-		str[0] = '0';
-	if (nb < 0)
-		str[0] = '-';
+		return (str);
+	n = (long)nb;
 	if (nb < 0)
 		n *= -1;
+	i = ft_get_str_len(nb, num_len, full_len, show_sign);
+	while (n != 0)
+	{
+		str[--i] = n % 10 + '0';
+		n /= 10;
+	}
+	return (str);
+}
+
+char	*ft_htoa_pad(int nb, int is_upper, int full_len)
+{
+	int		i;
+	long	n;
+	int		num_len;
+	char	*str;
+
+	num_len = ft_get_num_length(nb, 16);
+	str = ft_get_padded_string(nb, num_len, full_len, 0);
+	if (str == NULL)
+		return (NULL);
+	if (nb == 0)
+		return (str);
+	n = (long)nb;
+	if (nb < 0)
+		n *= -1;
+	i = ft_get_str_len(nb, num_len, full_len, 0);
 	while (n != 0)
 	{
 		if (is_upper)
-			str[i--] = "0123456789ABCDEF"[n % 16];
+			str[--i] = "0123456789ABCDEF"[n % 16];
 		else
-			str[i--] = "0123456789abcdef"[n % 16];
+			str[--i] = "0123456789abcdef"[n % 16];
 		n /= 16;
 	}
-	str[ft_get_num_length(nb, 16)] = '\0';
 	return (str);
 }
 
-int	ft_printf(const char *s, ...)
+size_t	ft_strlen(const char *s)
 {
-	(void)s;
-	write(1, "Oh mais non", 10);
-	return (10);
+	size_t	counter;
+
+	counter = 0;
+	while (*s++)
+		counter++;
+	return (counter);
+}
+
+void	ft_putstr_truncate(const char *s, int full_len)
+{
+	size_t	len;
+
+	len = ft_strlen(s);
+	if (full_len < (int)len)
+		write(1, s, full_len);
+	else
+		write(1, s, len);
 }
 
 int	main(void)
 {
-	printf("%s\n", ft_itoa(-0));
-	printf("%s\n", ft_itoa(299));
-	printf("%s\n", ft_itoa(8393));
-	printf("%s\n", ft_itoa(-22));
-	printf("%s\n", ft_itoa(-372837));
-	printf("%s\n", ft_htoa(0, 0));
-	printf("%s\n", ft_htoa(222, 0));
-	printf("%s\n", ft_htoa(892, 1));
-	printf("%s\n", ft_htoa(-183, 1));
-	printf("%s\n", ft_htoa(-27736, 1));
+	printf("|---| INT |---|\n\n");
+	printf("%s\n", ft_itoa_pad(-0, -1, 1));
+	printf("%+d\n\n", -0);
+	printf("%s\n", ft_itoa_pad(299, 44, 1));
+	printf("%+.44d\n\n", 299);
+	printf("%s\n", ft_itoa_pad(8393, 3, 0));
+	printf("%.3d\n\n", 8393);
+	printf("%s\n", ft_itoa_pad(-22, 100, 1));
+	printf("%+.100d\n\n", -22);
+	printf("%s\n", ft_itoa_pad(-372837, -1, 1));
+	printf("%+d\n", -372837);
+	printf("\n\n|---| HEX |---|\n\n");
+	printf("%s\n", ft_htoa_pad(0, 0, -1));
+	printf("%x\n\n", 0);
+	printf("%s\n", ft_htoa_pad(222, 0, -1));
+	printf("%x\n\n", 222);
+	printf("%s\n", ft_htoa_pad(892, 1, -1));
+	printf("%X\n\n", 892);
+	printf("%s\n", ft_htoa_pad(183, 1, -1));
+	printf("%X\n\n", 183);
+	printf("%s\n", ft_htoa_pad(27736, 1, -1));
+	printf("%X\n", 27736);
+	printf("\n\n|---| STRING |---|\n");
+	ft_putstr_truncate("oh mais non!", 5);
+	printf("\n");
+	printf("%.5s\n", "oh mais non!");
 	return (0);
 }
