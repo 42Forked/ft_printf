@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include "../libft/libft.h"
+#include <signal.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -143,8 +144,50 @@ void	ft_putstr_truncate(const char *s, int full_len)
 		write(1, s, len);
 }
 
+int	ft_isflag(int c)
+{
+	return (c == '.' || c == ' ' || c == '#' || c == '-' || c == '+');
+}
+
+int	ft_isspecifier(int c)
+{
+	return (c == 'd' || c == 'u' || c == 'x' || c == 'X' || c == 'c'
+		|| c == 's');
+}
+
+typedef struct s_settings
+{
+	int	width;
+	int	pad;
+	int	show_sign;
+	int	spaces;
+}		t_settings;
+
+int	ft_printf(const char *s, ...)
+{
+	int			written;
+	const char	*og_ptr;
+
+	written = 0;
+	og_ptr = s;
+	while (*s != '\0')
+	{
+		while (*s != '\0' && *s != '%')
+			s++;
+		write(1, og_ptr, s - og_ptr);
+		written += s - og_ptr;
+		og_ptr = s;
+		while (ft_isflag(*s) && *s != '\0')
+			s++;
+		if (ft_isspecifier(*s))
+			s++;
+	}
+	return (written);
+}
+
 int	main(void)
 {
+	ft_printf("String: %s\n", "oh bah non alors");
 	printf("|---| INT |---|\n\n");
 	printf("%s\n", ft_itoa_pad(-0, -1, 1));
 	printf("%+d\n\n", -0);
