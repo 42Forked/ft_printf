@@ -10,13 +10,30 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../libft/libft.h"
-#include <signal.h>
+#include "../Libft/libft.h"
+#include <stdarg.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 int	ft_get_num_length(int nb, int base_len)
+{
+	int	len;
+
+	len = 0;
+	if (nb == 0)
+		return (1);
+	while (nb != 0)
+	{
+		nb /= base_len;
+		len++;
+	}
+	return (len);
+}
+
+int	ft_get_num_length_2(unsigned int nb, int base_len)
 {
 	int	len;
 
@@ -43,6 +60,18 @@ int	ft_get_str_len(int nb, int num_len, int full_len, int show_sign)
 	return (str_len);
 }
 
+int	ft_get_str_len_2(int num_len, int full_len, int show_sign)
+{
+	int	str_len;
+
+	str_len = num_len;
+	if (full_len != -1 && full_len > num_len)
+		str_len = full_len;
+	if (show_sign)
+		str_len++;
+	return (str_len);
+}
+
 char	*ft_get_padded_string(int nb, int num_len, int full_len, int show_sign)
 {
 	int		i;
@@ -63,6 +92,32 @@ char	*ft_get_padded_string(int nb, int num_len, int full_len, int show_sign)
 	while (full_len != -1 && i < full_len - num_len)
 		str[i++] = '0';
 	if (nb < 0 || show_sign)
+		str--;
+	if (nb == 0)
+		str[str_len - 1] = '0';
+	str[str_len] = '\0';
+	return (str);
+}
+
+char	*ft_get_padded_string_2(unsigned int nb, int num_len, int full_len,
+		int show_sign)
+{
+	int		i;
+	char	*str;
+	int		str_len;
+
+	str_len = ft_get_str_len_2(num_len, full_len, show_sign);
+	str = (char *)malloc(sizeof(char) * (str_len + 1));
+	if (str == NULL)
+		return (NULL);
+	i = 0;
+	if (show_sign)
+		*str = '+';
+	if (show_sign)
+		str++;
+	while (full_len != -1 && i < full_len - num_len)
+		str[i++] = '0';
+	if (show_sign)
 		str--;
 	if (nb == 0)
 		str[str_len - 1] = '0';
@@ -95,30 +150,26 @@ char	*ft_itoa_pad(int nb, int full_len, int show_sign)
 	return (str);
 }
 
-char	*ft_htoa_pad(int nb, int is_upper, int full_len)
+char	*ft_htoa_pad(unsigned int nb, int is_upper, int full_len)
 {
 	int		i;
-	long	n;
 	int		num_len;
 	char	*str;
 
-	num_len = ft_get_num_length(nb, 16);
-	str = ft_get_padded_string(nb, num_len, full_len, 0);
+	num_len = ft_get_num_length_2(nb, 16);
+	str = ft_get_padded_string_2(nb, num_len, full_len, 0);
 	if (str == NULL)
 		return (NULL);
 	if (nb == 0)
 		return (str);
-	n = (long)nb;
-	if (nb < 0)
-		n *= -1;
-	i = ft_get_str_len(nb, num_len, full_len, 0);
-	while (n != 0)
+	i = ft_get_str_len_2(num_len, full_len, 0);
+	while (nb != 0)
 	{
 		if (is_upper)
-			str[--i] = "0123456789ABCDEF"[n % 16];
+			str[--i] = "0123456789ABCDEF"[nb % 16];
 		else
-			str[--i] = "0123456789abcdef"[n % 16];
-		n /= 16;
+			str[--i] = "0123456789abcdef"[nb % 16];
+		nb /= 16;
 	}
 	return (str);
 }
@@ -144,75 +195,220 @@ void	ft_putstr_truncate(const char *s, int full_len)
 		write(1, s, len);
 }
 
-int	ft_isflag(int c)
+static int	ft_includes(const char *s, int c)
 {
-	return (c == '.' || c == ' ' || c == '#' || c == '-' || c == '+');
-}
-
-int	ft_isspecifier(int c)
-{
-	return (c == 'd' || c == 'u' || c == 'x' || c == 'X' || c == 'c'
-		|| c == 's');
+	while (*s != '\0')
+	{
+		if (*s == c)
+			return (1);
+		s++;
+	}
+	return (0);
 }
 
 typedef struct s_settings
 {
-	int	width;
-	int	pad;
-	int	show_sign;
-	int	spaces;
-}		t_settings;
+	int				width;
+	int				precision;
+	int				zero_pad;
+	int				space_pad;
+	int				show_sign;
+	int				left_justify;
+	int				alt_form;
+	char			*str;
+	int				i;
+	unsigned int	ui;
+	uintptr_t		ptr;
+}					t_settings;
 
-int	ft_printf(const char *s, ...)
+int	ft_printf(const char *format, ...)
 {
 	int			written;
 	const char	*og_ptr;
+	va_list		va;
+	t_settings	settings;
 
 	written = 0;
-	og_ptr = s;
-	while (*s != '\0')
+	va_start(va, format);
+	while (*format != '\0')
 	{
-		while (*s != '\0' && *s != '%')
-			s++;
-		write(1, og_ptr, s - og_ptr);
-		written += s - og_ptr;
-		og_ptr = s;
-		while (ft_isflag(*s) && *s != '\0')
-			s++;
-		if (ft_isspecifier(*s))
-			s++;
+		og_ptr = format;
+		while (*format != '\0' && *format != '%')
+			format++;
+		write(1, og_ptr, format - og_ptr);
+		written += format - og_ptr;
+		settings = {-1};
+		if (*format == '%')
+			format++;
+		while (ft_includes(" -+0#", *format) && *format != '\0')
+		{
+			if (*format == ' ')
+				settings.space_pad = 1;
+			if (*format == '-')
+				settings.left_justify = 1;
+			if (*format == '+')
+				settings.show_sign = 1;
+			if (*format == '0')
+				settings.zero_pad = 1;
+			if (*format == '#')
+				settings.alt_form = 1;
+			format++;
+		}
+		if (*format == '*')
+		{
+			settings.width = va_arg(va, int);
+			format++;
+		}
+		else
+		{
+			settings.width = ft_atoi(format);
+			while (ft_includes("0123456789", *format))
+				format++;
+		}
+		if (*format == '.')
+		{
+			format++;
+			if (*format == '*')
+			{
+				settings.width = va_arg(va, int);
+				format++;
+			}
+			else
+			{
+				settings.width = ft_atoi(format);
+				while (ft_includes("0123456789", *format))
+					format++;
+			}
+		}
+		if (ft_includes("cspdiuxX%", *format))
+		{
+			if (*format == 'c')
+			{
+				c = (char)va_arg(va, int);
+				write(1, &c, 1);
+			}
+			else if (*format == 's')
+			{
+				str = va_arg(va, char *);
+				write(1, str, ft_strlen(str));
+			}
+			else if (*format == 'p')
+			{
+				v = va_arg(va, void *);
+				if (v == 0)
+					write(1, "(nil)", 5);
+				else
+				{
+					str = ft_htoa_pad((uintptr_t)v, 0, -1);
+					write(1, "0x", 2);
+					write(1, str, ft_strlen(str));
+				}
+			}
+			else if (*format == 'd' || *format == 'i')
+			{
+				i = va_arg(va, int);
+				str = ft_itoa_pad(i, -1, 0);
+				write(1, str, ft_strlen(str));
+			}
+			else if (*format == 'x' || *format == 'X' || *format == 'u')
+			{
+				ui = va_arg(va, unsigned int);
+				if (*format == 'u')
+					str = ft_itoa_pad(ui, -1, 0);
+				else
+					str = ft_htoa_pad(ui, *format == 'X', -1);
+				if (*format != 'u' && settings.show_hex_prefix && ui != 0)
+				{
+					if (*format == 'X')
+						write(1, "0X", 2);
+					else
+						write(1, "0x", 2);
+				}
+				write(1, str, ft_strlen(str));
+			}
+			else if (*format == '%')
+				write(1, "%", 1);
+			format++;
+		}
 	}
+	va_end(va);
 	return (written);
 }
 
-int	main(void)
+void	ft_test_ints(const char *s, int n)
 {
-	ft_printf("String: %s\n", "oh bah non alors");
-	printf("|---| INT |---|\n\n");
-	printf("%s\n", ft_itoa_pad(-0, -1, 1));
-	printf("%+d\n\n", -0);
-	printf("%s\n", ft_itoa_pad(299, 44, 1));
-	printf("%+.44d\n\n", 299);
-	printf("%s\n", ft_itoa_pad(8393, 3, 0));
-	printf("%.3d\n\n", 8393);
-	printf("%s\n", ft_itoa_pad(-22, 100, 1));
-	printf("%+.100d\n\n", -22);
-	printf("%s\n", ft_itoa_pad(-372837, -1, 1));
-	printf("%+d\n", -372837);
-	printf("\n\n|---| HEX |---|\n\n");
-	printf("%s\n", ft_htoa_pad(0, 0, -1));
-	printf("%x\n\n", 0);
-	printf("%s\n", ft_htoa_pad(222, 0, -1));
-	printf("%x\n\n", 222);
-	printf("%s\n", ft_htoa_pad(892, 1, -1));
-	printf("%X\n\n", 892);
-	printf("%s\n", ft_htoa_pad(183, 1, -1));
-	printf("%X\n\n", 183);
-	printf("%s\n", ft_htoa_pad(27736, 1, -1));
-	printf("%X\n", 27736);
-	printf("\n\n|---| STRING |---|\n");
-	ft_putstr_truncate("oh mais non!", 5);
-	printf("\n");
-	printf("%.5s\n", "oh mais non!");
-	return (0);
+	ft_printf("\n");
+	ft_printf("ft_printf: ");
+	ft_printf(s, n);
+	ft_printf("   printf: ");
+	printf(s, n);
 }
+
+void	ft_test_hexs(const char *s, int n)
+{
+	ft_printf("\n");
+	ft_printf("ft_printf: [");
+	ft_printf(s, n);
+	ft_printf("]\n");
+	ft_printf("   printf: [");
+	printf(s, n);
+	printf("]\n");
+}
+
+void	ft_test_pointers(const char *s, void *ptr)
+{
+	ft_printf("\n");
+	ft_printf("ft_printf: ");
+	ft_printf(s, ptr);
+	ft_printf("   printf: ");
+	printf(s, ptr);
+}
+
+void	ft_test_strings(const char *s, char *str)
+{
+	ft_printf("\n");
+	ft_printf("ft_printf: ");
+	ft_printf(s, str);
+	ft_printf("   printf: ");
+	printf(s, str);
+	void ft_test_chars(const char *s, char c)
+	{
+		ft_printf("\n");
+		ft_printf("ft_printf: ");
+		ft_printf(s, c);
+		ft_printf("   printf: ");
+		printf(s, c);
+	}
+
+	int main(void)
+	{
+		ft_printf("| ------------- |    CHAR     | -------------- |\n");
+		ft_test_chars("%c\n", 'E');
+		ft_printf("\n| ------------- |   STRING    | -------------- |\n");
+		ft_test_strings("%.5s\n", "oh mais non!");
+		ft_printf("\n| ------------- |   POINTER   | -------------- |\n");
+		ft_test_pointers("%p\n", (void *)7263);
+		ft_test_pointers("%p\n", (void *)72638374);
+		ft_test_pointers("%p\n", (void *)0);
+		ft_printf("\n| ------------- |     INT     | -------------- |\n");
+		ft_test_ints("%+d\n", -0);
+		ft_test_ints("%.44d\n", 299);
+		ft_test_ints("%.3d\n", 8393);
+		ft_test_ints("%+.100d\n", -22);
+		ft_test_ints("%+d\n", -372837);
+		ft_printf("\n| ------------- |     HEX     | ------------- |\n");
+	ft_test_hexs("
+	ft_test_hexs("%-13x]\n", 2221);
+	ft_test_hexs("%013X]\n", 38374);
+	ft_test_hexs("%#0.13X]\n", 38374);
+	ft_test_hexs("%#13X]\n", 38374);
+	ft_test_hexs("%X]\n", 892);
+	ft_test_hexs("%#.X]\n", 181818);
+	ft_test_hexs("%+#.x]\n", -2637);
+	ft_test_hexs("%X]\n", -18983);
+	ft_test_hexs("%X]\n", 27736);
+	ft_test_hexs("%x]\n", -2);
+	ft_test_hexs("%#x]\n", 0);]\n", 0);
+	ft_printf("\n| ------------- |     END     | ------------- |\n");
+	return (0);
+	}
