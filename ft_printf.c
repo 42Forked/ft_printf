@@ -11,7 +11,6 @@
 /* ************************************************************************** */
 
 #include "../Libft/libft.h"
-#include <__stdarg_va_list.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -207,7 +206,7 @@ static int	ft_includes(const char *s, int c)
 	return (0);
 }
 
-typedef struct s_config
+typedef struct s_settings
 {
 	int				width;
 	int				precision;
@@ -220,46 +219,23 @@ typedef struct s_config
 	int				i;
 	unsigned int	ui;
 	uintptr_t		ptr;
-}					t_config;
+}					t_settings;
 
-int	ft_parse_flags(t_config *config, int c)
+int	ft_parse_flags(t_settings *settings, int c)
 {
 	if (c == ' ')
-		config->space_pad = 1;
+		settings->space_pad = 1;
 	if (c == '-')
-		config->left_justify = 1;
+		settings->left_justify = 1;
 	if (c == '+')
-		config->show_sign = 1;
+		settings->show_sign = 1;
 	if (c == '0')
-		config->zero_pad = 1;
+		settings->zero_pad = 1;
 	if (c == '#')
-		config->alt_form = 1;
+		settings->alt_form = 1;
 	if (ft_includes(" -+0#", c))
 		return (1);
 	return (0);
-}
-
-int	ft_parse_width_and_precision(t_config *config, const char *s, va_list va)
-{
-	int			num;
-	int			is_precision;
-	const char	*og_ptr;
-
-	og_ptr = s;
-	if (*s == '.')
-	{
-		s++;
-		is_precision = 1;
-		config->width = -1;
-	}
-	if (*s == '*')
-	{
-		if (is_precision)
-			config->precision = va_arg(va, int);
-		else
-			config->width = va_arg(va, int);
-		return (s - og_ptr + 1);
-	}
 }
 
 int	ft_printf(const char *format, ...)
@@ -267,7 +243,7 @@ int	ft_printf(const char *format, ...)
 	int			written;
 	const char	*og_ptr;
 	va_list		va;
-	t_config	config;
+	t_settings	settings;
 
 	written = 0;
 	va_start(va, format);
@@ -278,19 +254,19 @@ int	ft_printf(const char *format, ...)
 			format++;
 		write(1, og_ptr, format - og_ptr);
 		written += format - og_ptr;
-		config = {-1};
+		settings = {-1};
 		if (*format == '%')
 			format++;
-		while (*format != '\0' && ft_parse_flags(&config, *format))
+		while (*format != '\0' && ft_parse_flags(&settings, *format))
 			format++;
 		if (*format == '*')
 		{
-			config.width = va_arg(va, int);
+			settings.width = va_arg(va, int);
 			format++;
 		}
 		else
 		{
-			config.width = ft_atoi(format);
+			settings.width = ft_atoi(format);
 			while (ft_includes("0123456789", *format))
 				format++;
 		}
@@ -299,12 +275,12 @@ int	ft_printf(const char *format, ...)
 			format++;
 			if (*format == '*')
 			{
-				config.width = va_arg(va, int);
+				settings.width = va_arg(va, int);
 				format++;
 			}
 			else
 			{
-				config.width = ft_atoi(format);
+				settings.width = ft_atoi(format);
 				while (ft_includes("0123456789", *format))
 					format++;
 			}
@@ -346,7 +322,7 @@ int	ft_printf(const char *format, ...)
 					str = ft_itoa_pad(ui, -1, 0);
 				else
 					str = ft_htoa_pad(ui, *format == 'X', -1);
-				if (*format != 'u' && config.show_hex_prefix && ui != 0)
+				if (*format != 'u' && settings.show_hex_prefix && ui != 0)
 				{
 					if (*format == 'X')
 						write(1, "0X", 2);
