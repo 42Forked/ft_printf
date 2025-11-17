@@ -18,6 +18,21 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+typedef struct s_config
+{
+	int				width;
+	int				precision;
+	int				zero_pad;
+	int				space_pad;
+	int				force_sign;
+	int				left_justify;
+	int				alt_form;
+	char			*str;
+	int				i;
+	unsigned int	ui;
+	uintptr_t		ptr;
+}					t_config;
+
 int	ft_get_num_length(int nb, int base_len)
 {
 	int	len;
@@ -60,15 +75,24 @@ int	ft_get_str_len(int nb, int num_len, int full_len, int force_sign)
 	return (str_len);
 }
 
-int	ft_get_str_len_2(int num_len, int full_len, int force_sign)
+int	ft_get_str_len_2(int num_len, t_config *config)
 {
 	int	str_len;
 
+	int to_return ;
 	str_len = num_len;
-	if (full_len != -1 && full_len > num_len)
-		str_len = full_len;
-	if (force_sign)
-		str_len++;
+	if (config->precision > num_len)
+		str_len = config->precision;
+	if (config->alt_form && config->ui != 0)
+		str_len += 2;
+	if (config->width > str_len)
+	{
+		to_return = config->width;
+		config->width = config->width - str_len;
+		return (to_return);
+	}
+	else
+		config->width = 0;
 	return (str_len);
 }
 
@@ -99,28 +123,66 @@ char	*ft_get_padded_string(int nb, int num_len, int full_len, int force_sign)
 	return (str);
 }
 
-char	*ft_get_padded_string_2(unsigned int nb, int num_len, int full_len,
-		int force_sign)
+int	ft_pad_with_space(t_config *config)
+{
+	// ft_test_hexs("%#8.5x", 0);
+	// printf("\nZero pad: %d\nPrecision: %d\nLeft justify: %d\nAlt form: %d\n",
+	// config->zero_pad, config->precision, config->left_justify,
+	// config->alt_form);
+	return ((!config->zero_pad && config->precision < 0) || config->left_justify
+		|| (config->alt_form && config->precision > 0));
+}
+
+char	*ft_get_padded_string_2(unsigned int nb, int num_len, t_config *config,
+		int is_upper)
 {
 	int		i;
+	int		pad_i;
+	int		nb_i;
 	char	*str;
 	int		str_len;
+	char	pad_char;
 
-	str_len = ft_get_str_len_2(num_len, full_len, force_sign);
+	pad_char = '0';
+	if (ft_pad_with_space(config))
+		pad_char = ' ';
+	// printf("Pad char: [%c]\n", pad_char);
+	// printf("\nPad char is: %c\n", pad_char);
+	str_len = ft_get_str_len_2(num_len, config);
 	str = (char *)malloc(sizeof(char) * (str_len + 1));
 	if (str == NULL)
 		return (NULL);
-	i = 0;
-	if (force_sign)
-		*str = '+';
-	if (force_sign)
-		str++;
-	while (full_len != -1 && i < full_len - num_len)
+	pad_i = 0;
+	while ((pad_char == ' ' || !config->alt_form) && !config->left_justify
+		&& pad_i < config->width)
+		str[pad_i++] = pad_char;
+	i = pad_i;
+	if (config->alt_form && nb != 0)
+	{
 		str[i++] = '0';
-	if (force_sign)
-		str--;
-	if (nb == 0)
-		str[str_len - 1] = '0';
+		str[i++] = "xX"[is_upper];
+	}
+	pad_i = 0;
+	while (pad_char == '0' && config->alt_form && !config->left_justify
+		&& pad_i < config->width)
+		str[i + pad_i++] = pad_char;
+	i += pad_i;
+	pad_i = 0;
+	while (config->precision > num_len && pad_i < config->precision - num_len)
+		str[i + pad_i++] = '0';
+	i += pad_i;
+	nb_i = num_len - 1;
+	while (nb_i >= 0)
+	{
+		if (is_upper)
+			str[i + (nb_i--)] = "0123456789ABCDEF"[nb % 16];
+		else
+			str[i + (nb_i--)] = "0123456789abcdef"[nb % 16];
+		nb /= 16;
+	}
+	i += num_len;
+	while (config->left_justify && i < str_len)
+		str[i++] = pad_char;
 	str[str_len] = '\0';
 	return (str);
 }
@@ -150,19 +212,21 @@ char	*ft_itoa_pad(int nb, int full_len, int force_sign)
 	return (str);
 }
 
-char	*ft_htoa_pad(unsigned int nb, int is_upper, int full_len)
+char	*ft_htoa_pad(unsigned int nb, t_config *config, int is_upper)
 {
 	int		i;
 	int		num_len;
 	char	*str;
 
+	return (ft_get_padded_string_2(nb, ft_get_num_length_2(nb, 16), config,
+			is_upper));
 	num_len = ft_get_num_length_2(nb, 16);
-	str = ft_get_padded_string_2(nb, num_len, full_len, 0);
+	str = ft_get_padded_string_2(nb, num_len, config, is_upper);
 	if (str == NULL)
 		return (NULL);
 	if (nb == 0)
 		return (str);
-	i = ft_get_str_len_2(num_len, full_len, 0);
+	i = ft_get_str_len_2(num_len, config);
 	while (nb != 0)
 	{
 		if (is_upper)
@@ -206,36 +270,15 @@ static int	ft_includes(const char *s, int c)
 	return (0);
 }
 
-typedef struct s_config
-{
-	int				width;
-	int				precision;
-	int				zero_pad;
-	int				space_pad;
-	int				force_sign;
-	int				left_justify;
-	int				alt_form;
-	char			*str;
-	int				i;
-	unsigned int	ui;
-	uintptr_t		ptr;
-}					t_config;
-
 int	ft_parse_flags(t_config *config, int c)
 {
-	if (c == ' ' && !config->force_sign)
+	if (c == ' ')
 		config->space_pad = 1;
 	if (c == '-')
-	{
 		config->left_justify = 1;
-		config->zero_pad = 0;
-	}
 	if (c == '+')
-	{
 		config->force_sign = 1;
-		config->space_pad = 0;
-	}
-	if (c == '0' && !config->precision && !config->left_justify)
+	if (c == '0')
 		config->zero_pad = 1;
 	if (c == '#')
 		config->alt_form = 1;
@@ -287,7 +330,6 @@ int	ft_parse_width_and_precision(t_config *config, const char *s, va_list va)
 	if (*s == '.')
 	{
 		s++;
-		config->width = -1;
 		if (*s == '*')
 		{
 			config->precision = va_arg(va, int);
@@ -317,7 +359,8 @@ int	ft_printf(const char *format, ...)
 		written += format - og_ptr;
 		if (*format == '\0')
 			return (written);
-		config = (t_config){.width = -1, .precision = -1};
+		config = (t_config){.width = 0, .precision = -1, .alt_form = 0,
+			.left_justify = 0, .zero_pad = 0, .force_sign = 0};
 		if (*format == '%')
 			format++;
 		while (*format != '\0' && ft_parse_flags(&config, *format))
@@ -333,17 +376,21 @@ int	ft_printf(const char *format, ...)
 			else if (*format == 's')
 			{
 				config.str = va_arg(va, char *);
-				write(1, config.str, ft_strlen(config.str));
+				if ((int)ft_strlen(config.str) > config.precision)
+					write(1, config.str, config.precision);
+				else
+					write(1, config.str, ft_strlen(config.str));
 			}
 			else if (*format == 'p')
 			{
+				config.alt_form = 1;
+				config.ui = 1;
 				config.ptr = (uintptr_t)va_arg(va, void *);
 				if (config.ptr == 0)
 					write(1, "(nil)", 5);
 				else
 				{
-					config.str = ft_htoa_pad((uintptr_t)config.ptr, 0, -1);
-					write(1, "0x", 2);
+					config.str = ft_htoa_pad((uintptr_t)config.ptr, &config, 0);
 					write(1, config.str, ft_strlen(config.str));
 				}
 			}
@@ -357,24 +404,18 @@ int	ft_printf(const char *format, ...)
 			else if (*format == 'x' || *format == 'X' || *format == 'u')
 			{
 				config.ui = va_arg(va, unsigned int);
-				if (*format != 'u' && config.alt_form && config.ui != 0)
-				{
-					config.width = config.width - 2;
-					if (*format == 'X')
-						write(1, "0X", 2);
-					else
-						write(1, "0x", 2);
-				}
-				if (*format == 'u')
-					config.str = ft_itoa_pad(config.ui, config.width,
-							config.force_sign);
-				else
-					config.str = ft_htoa_pad(config.ui, *format == 'X',
-							config.width);
 				if (*format != 'u' && config.ui == 0 && config.precision == 0)
 					write(1, "", 1);
 				else
+				{
+					if (*format == 'u')
+						config.str = ft_itoa_pad(config.ui, config.width,
+								config.force_sign);
+					else
+						config.str = ft_htoa_pad(config.ui, &config,
+								*format == 'X');
 					write(1, config.str, ft_strlen(config.str));
+				}
 			}
 			else if (*format == '%')
 				write(1, "%", 1);
@@ -382,8 +423,9 @@ int	ft_printf(const char *format, ...)
 		}
 		else
 		{
-			write(1, og_ptr, format + 1 - og_ptr);
-			written += format + 1 - og_ptr;
+			format++;
+			write(1, og_ptr, format - og_ptr);
+			written += format - og_ptr;
 		}
 	}
 	va_end(va);
@@ -447,40 +489,45 @@ void	ft_test_chars(const char *s, char c)
 
 int	main(void)
 {
-	// ft_printf("| ------------- |    CHAR     | -------------- |\n");
-	// ft_test_chars("%c", 'E');
-	// ft_printf("\n| ------------- |   STRING    | -------------- |\n");
-	// ft_test_strings("%.5s", "oh mais non!");
-	// ft_printf("\n| ------------- |   POINTER   | -------------- |\n");
-	// ft_test_pointers("%p", (void *)7263);
-	// ft_test_pointers("%p", (void *)72638374);
-	// ft_test_pointers("%p", (void *)0);
-	// ft_printf("\n| ------------- |     INT     | -------------- |\n");
-	// ft_test_ints("%+d%+d%+d%+d%+d%+d%+d", -0);
-	// printf("\n%+d%+d%+.22d%+d%+d%+d%+d\n", -0, 0, 0, -55, 0, -0, 0);
-	// ft_printf("\n%+d%+d%+.22d%+d%+d%+d%+d\n", -0, 0, 0, -55, 0, -0, 0);
-	// ft_test_ints("%.44d", 299);
-	// ft_test_ints("%.3d", 8393);
-	// ft_test_ints("%+.100d", -22);
-	// ft_test_ints("%+d", -372837);
-	// ft_printf("\n| ------------- |     HEX     | ------------- |\n");
-	// ft_test_hexs("%#8x", 18);
-	// ft_test_hexs("%#08x", 18);
-	// ft_test_hexs("%08x", 18);
-	// ft_test_hexs("%8.3x", 18);
+	ft_printf("| ------------- |    CHAR     | -------------- |\n");
+	ft_test_chars("%c", 'E');
+	ft_printf("\n| ------------- |   STRING    | -------------- |\n");
+	ft_test_strings("%.5s", "oh mais non!");
+	ft_printf("\n| ------------- |   POINTER   | -------------- |\n");
+	ft_test_pointers("%p", (void *)7263);
+	ft_test_pointers("%p", (void *)72638374);
+	ft_test_pointers("%p", (void *)0);
+	ft_printf("\n| ------------- |     INT     | -------------- |\n");
+	ft_test_ints("%+d%+d%+d%+d%+d%+d%+d", -0);
+	printf("\n%+d%+d%+.22d%+d%+d%+d%+d\n", -0, 0, 0, -55, 0, -0, 0);
+	ft_printf("\n%+d%+d%+.22d%+d%+d%+d%+d\n", -0, 0, 0, -55, 0, -0, 0);
+	ft_test_ints("%.44d", 299);
+	ft_test_ints("%.3d", 8393);
+	ft_test_ints("%+.100d", -22);
+	ft_test_ints("%+d", -372837);
+	ft_printf("\n| ------------- |     HEX     | ------------- |\n");
+	ft_test_hexs("%#8x", 18);
+	ft_test_hexs("%#08x", 18);
+	ft_test_hexs("%08x", 18);
+	ft_test_hexs("%-0#2.3x", 18);
 	ft_test_hexs("%.00x", 0);
 	ft_test_hexs("%#.00x", 0);
 	ft_test_hexs("%.00x", 12);
-	// ft_test_hexs("%#10X", 2748);
-	// ft_test_hexs("%x", -1);
-	// ft_test_hexs("%X", -1);
-	// ft_test_hexs("%.8x", 12);
-	// ft_test_hexs("%-#10x", 2748);
-	// ft_test_hexs("%5x", 0);
-	// ft_test_hexs("%#.5x", 0);
-	// ft_test_hexs("%+x", 1);
-	// ft_test_hexs("% x", 1);
-	// ft_test_hexs("%3x", 11259375);
-	// ft_printf("\n| ------------- |     END     | ------------- |\n");
+	ft_test_hexs("%#10X", 2748);
+	ft_test_hexs("%x", -1);
+	ft_test_hexs("%X", -1);
+	ft_test_hexs("%.8x", 12);
+	ft_test_hexs("%-#10x", 2748);
+	ft_test_hexs("%5x", 0);
+	ft_test_hexs("%#.5x", 0);
+	ft_test_hexs("%#8.5x", 0);
+	ft_test_hexs("%+x", 1);
+	ft_test_hexs("% x", 1);
+	ft_test_hexs("%3x", 11259375);
+	ft_test_hexs("%+# 8.3x", 18);
+	ft_test_hexs("%# 012.5x", 18);
+	ft_test_hexs("%#- 012.2x", 18000);
+	ft_test_hexs("%# 012+.5xjehasbo%4x", 18);
+	ft_printf("\n| ------------- |     END     | ------------- |\n");
 	return (0);
 }
