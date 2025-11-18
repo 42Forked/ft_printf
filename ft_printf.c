@@ -341,6 +341,31 @@ int	ft_parse_width_and_precision(t_config *config, const char *s, va_list va)
 	return (s - og_ptr);
 }
 
+int	ft_putchar_with_pad(int c, t_config config)
+{
+	int	i;
+
+	i = 0;
+	if (config.width > 0 && !config.left_justify)
+	{
+		while (i < config.width - 1)
+		{
+			write(1, " ", 1);
+			i++;
+		}
+	}
+	write(1, &c, 1);
+	if (config.width > 0)
+	{
+		while (i < config.width - 1)
+		{
+			write(1, " ", 1);
+			i++;
+		}
+	}
+    return i + 1;
+}
+
 int	ft_printf(const char *format, ...)
 {
 	int			written;
@@ -369,14 +394,13 @@ int	ft_printf(const char *format, ...)
 		if (ft_includes("cspdiuxX%", *format))
 		{
 			if (*format == 'c')
-			{
-				config.i = va_arg(va, int);
-				write(1, &config.i, 1);
-			}
+				ft_putchar_with_pad(va_arg(va, int), config);
 			else if (*format == 's')
 			{
 				config.str = va_arg(va, char *);
-				if ((int)ft_strlen(config.str) > config.precision)
+                if (!config.str)
+                    write(1, "(null)", 6);
+                else if ((int)ft_strlen(config.str) > config.precision)
 					write(1, config.str, config.precision);
 				else
 					write(1, config.str, ft_strlen(config.str));
@@ -491,8 +515,37 @@ int	main(void)
 {
 	ft_printf("| ------------- |    CHAR     | -------------- |\n");
 	ft_test_chars("%c", 'E');
+	ft_test_chars("%5c", 'E');
+	ft_test_chars("%-5c", 'E');
+	ft_test_chars("%05c", 'E');
+	ft_test_chars("%c", 'E');
+	ft_test_chars("%5c", 0);
+	ft_test_chars("%-5c", 0);
+	ft_test_chars("%c", 0);
+	ft_test_chars("%c", -56);
+	ft_test_chars("%c", 127);
 	ft_printf("\n| ------------- |   STRING    | -------------- |\n");
-	ft_test_strings("%.5s", "oh mais non!");
+	ft_test_strings("%s", "oh mais non!");
+	ft_test_strings("%s", "hi");
+	ft_test_strings("%5s", "hi");
+	ft_test_strings("%-5s", "hi");
+	ft_test_strings("%.0s", "hi");
+	ft_test_strings("%.1s", "hi");
+	ft_test_strings("%.5s", "hi");
+	ft_test_strings("%.5s", "hi");
+	ft_test_strings("%5.1s", "hi");
+	ft_test_strings("%-5.1s", "hi");
+	ft_test_strings("%05s", "hi");
+	ft_test_strings("%0.4s", "hi");
+	ft_test_strings("%s", NULL);
+	ft_test_strings("%.3s", NULL);
+	ft_test_strings("%8.3s", NULL);
+	ft_test_strings("%-8s", NULL);
+	ft_test_strings("%s", "");
+	ft_test_strings("%5s", "");
+	ft_test_strings("%.0s", "");
+	ft_test_strings("%.100000s", "oh no!");
+	ft_test_strings("%.3s", "\xFF\xFE\xFD");
 	ft_printf("\n| ------------- |   POINTER   | -------------- |\n");
 	ft_test_pointers("%p", (void *)7263);
 	ft_test_pointers("%p", (void *)72638374);
@@ -512,7 +565,10 @@ int	main(void)
 	ft_test_hexs("%-0#2.3x", 18);
 	ft_test_hexs("%.00x", 0);
 	ft_test_hexs("%#.00x", 0);
+	ft_test_hexs("%#x", 0);
+	ft_test_hexs("%#08x", 0);
 	ft_test_hexs("%.00x", 12);
+	ft_test_hexs("%.0x", 12);
 	ft_test_hexs("%#10X", 2748);
 	ft_test_hexs("%x", -1);
 	ft_test_hexs("%X", -1);
@@ -524,9 +580,11 @@ int	main(void)
 	ft_test_hexs("%+x", 1);
 	ft_test_hexs("% x", 1);
 	ft_test_hexs("%3x", 11259375);
+	ft_test_hexs("%-#8.3x", 78);
 	ft_test_hexs("%+# 8.3x", 18);
 	ft_test_hexs("%# 012.5x", 18);
 	ft_test_hexs("%#- 012.2x", 18000);
+	ft_test_hexs("%#40.1x", 1883748);
 	ft_test_hexs("%# 012+.5xjehasbo%4x", 18);
 	ft_printf("\n| ------------- |     END     | ------------- |\n");
 	return (0);
