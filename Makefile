@@ -3,11 +3,8 @@ NAME 	= libftprintf.a
 CC		= cc
 CFLAGS	= -Wall -Werror -Wextra
 
-SRCS		= ft_printf.c
+SRCS		= ft_printf.c utils/ft_gethex.c utils/ft_getint.c utils/ft_misc.c
 OBJS		= $(SRCS:.c=.o)
-
-BONUS_SRCS	= ft_printf.c
-BONUS_OBJS	= $(BONUS_SRCS:.c=.o)
 
 all: $(NAME)
 
@@ -17,11 +14,10 @@ $(NAME): $(OBJS)
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-bonus: $(OBJS) $(BONUS_OBJS)
-	ar rcu $(NAME) $?
+bonus: all
 
 clean:
-	rm -f $(OBJS) $(BONUS_OBJS)
+	rm -f $(OBJS)
 
 fclean: clean
 	rm -f $(NAME)
