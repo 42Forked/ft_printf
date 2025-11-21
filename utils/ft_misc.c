@@ -11,23 +11,9 @@
 /* ************************************************************************** */
 
 #include "../ft_printf.h"
+#include <stdint.h>
 
-int	ft_hexlen(uintptr_t nb)
-{
-	int	len;
-
-	len = 0;
-	if (nb == 0)
-		return (1);
-	while (nb != 0)
-	{
-		nb /= 16;
-		len++;
-	}
-	return (len);
-}
-
-int	ft_intlen(unsigned int nb, int precision)
+int	ft_hexlen(uintptr_t nb, int precision)
 {
 	int	len;
 
@@ -38,32 +24,49 @@ int	ft_intlen(unsigned int nb, int precision)
 		return (1);
 	while (nb != 0)
 	{
+		nb /= 16;
+		len++;
+	}
+	return (len);
+}
+
+int	ft_intlen(uint64_t nb, int precision)
+{
+	int	len;
+
+	len = 0;
+	if (nb == 0 && precision == 0)
+		return (0);
+	if (nb == 0)
+		return (1);
+	while (nb > 0)
+	{
 		nb /= 10;
 		len++;
 	}
 	return (len);
 }
 
-int	ft_hex_full_strlen(int num_len, t_config *config, int is_ptr)
+int	ft_hex_full_strlen(uintptr_t nb, int num_len, t_config *cfg, int is_ptr)
 {
 	int	tmp;
 	int	str_len;
 
 	str_len = num_len;
-	if (config->precision > num_len)
-		str_len = config->precision;
-	if (config->alt_form && config->ui != 0)
+	if (cfg->precision > num_len)
+		str_len = cfg->precision;
+	if ((cfg->alt_form && nb != 0) || is_ptr)
 		str_len += 2;
-	if (is_ptr && config->force_sign)
+	if (is_ptr && cfg->force_sign)
 		str_len++;
-	if (config->width > str_len)
+	if (cfg->width > str_len)
 	{
-		tmp = config->width;
-		config->width = config->width - str_len;
+		tmp = cfg->width;
+		cfg->width = cfg->width - str_len;
 		return (tmp);
 	}
 	else
-		config->width = 0;
+		cfg->width = 0;
 	return (str_len);
 }
 

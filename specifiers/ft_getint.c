@@ -11,9 +11,8 @@
 /* ************************************************************************** */
 
 #include "../ft_printf.h"
-#include <stdio.h>
 
-static void	init_intctx(t_intctx *ctx, unsigned int nb, t_config *cfg)
+static void	init_intctx(t_intctx *ctx, uint64_t nb, t_config *cfg)
 {
 	if (cfg->left_justify || (cfg->zero_pad && cfg->precision != -1))
 		cfg->zero_pad = 0;
@@ -70,8 +69,6 @@ static void	apply_digits_and_right_padding(char *str, t_intctx *ctx)
 	int	nb_i;
 
 	nb_i = ctx->num_len - 1;
-	if (ctx->cfg->is_neg)
-		ctx->nb *= -1;
 	while (nb_i >= 0)
 	{
 		str[ctx->i + nb_i] = "0123456789"[ctx->nb % 10];
@@ -86,7 +83,7 @@ static void	apply_digits_and_right_padding(char *str, t_intctx *ctx)
 	}
 }
 
-char	*ft_getint(unsigned int nb, t_config *cfg)
+char	*ft_getint(uint64_t nb, t_config *cfg)
 {
 	t_intctx	ctx;
 	char		*str;

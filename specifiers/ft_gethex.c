@@ -14,14 +14,16 @@
 
 static void	init_hexctx(t_hexctx *ctx, uintptr_t nb, t_config *cfg, int is_ptr)
 {
+	if (cfg->precision != -1)
+		cfg->zero_pad = 0;
 	ctx->nb = nb;
 	ctx->cfg = cfg;
-	ctx->num_len = ft_hexlen(nb);
+	ctx->num_len = ft_hexlen(nb, cfg->precision);
 	ctx->pad_char = '0';
 	if ((!cfg->zero_pad && cfg->precision <= 0) || cfg->left_justify
 		|| (cfg->alt_form && cfg->precision != -1))
 		ctx->pad_char = ' ';
-	ctx->str_len = ft_hex_full_strlen(ctx->num_len, cfg, is_ptr);
+	ctx->str_len = ft_hex_full_strlen(nb, ctx->num_len, cfg, is_ptr);
 	ctx->force_sign = is_ptr && cfg->force_sign;
 	ctx->i = 0;
 }
@@ -32,7 +34,10 @@ static void	apply_left_padding_and_prefix(char *str, t_hexctx *ctx,
 	while ((ctx->pad_char == ' ' || !ctx->cfg->alt_form)
 		&& !ctx->cfg->left_justify && ctx->i < ctx->cfg->width)
 	{
-		str[ctx->i] = ctx->pad_char;
+		if (ctx->cfg->zero_pad)
+			str[ctx->i] = '0';
+		else
+			str[ctx->i] = ' ';
 		ctx->i++;
 	}
 	if (ctx->force_sign)
@@ -77,7 +82,7 @@ static void	apply_digits_and_right_padding(char *str, t_hexctx *ctx,
 	else
 		base = "0123456789abcdef";
 	nb_i = ctx->num_len - 1;
-	while (nb_i >= 0)
+	while (nb_i >= 0 && (ctx->nb > 0 || ctx->cfg->precision != 0))
 	{
 		str[ctx->i + nb_i] = base[ctx->nb % 16];
 		ctx->nb /= 16;
